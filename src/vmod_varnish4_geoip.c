@@ -13,6 +13,10 @@
 #include <GeoIPCity.h>
 #include <pthread.h>
 
+#include "vcl.h"
+#include "vrt.h"
+#include "vrt_obj.h"
+
 #define vcl_string char
 
 /* At Opera, we use the non-existent "A6" country
@@ -26,29 +30,31 @@ pthread_mutex_t geoip_mutex;
 GeoIP* gi;
 
 /*
- * vmod entrypoint. Sets up the header mutex.
+ * vmod entrypoint.
+ * Initializes the mutex.
+ * Initializes the GeoIP DB
  */
-int
-init_function(struct vmod_priv *priv __attribute__((unused)),
-              const struct VCL_conf *conf __attribute__((unused))) {
+int init_function(struct vmod_priv *priv, const struct VCL_conf *cfg) {
 
-    assert(pthread_mutex_init(&geoip_mutex, NULL) == 0);
-
+    if (pthread_mutex_init(&geoip_mutex, NULL) != 0) {
+        printf("\nMutex init failed\n");
+        return 1;
+    }
     if (!gi) {
         if (GeoIP_db_avail(GEOIP_COUNTRY_EDITION)) {
             gi = GeoIP_open_type(GEOIP_COUNTRY_EDITION, GEOIP_STANDARD);
         }
-        assert(gi);
+        if (!gi) {
+            printf("\nGeoIP DB initialization failed.\n");
+            return 1;
+        }
     }
-    return (0);
+    return 0;
 }
 
 static int geoip_lookup_country(char *ip, vcl_string *resolved) {
 
     pthread_mutex_lock(&geoip_mutex);
-
-    assert(gi);
-    assert(ip);
 
     const char * rec = GeoIP_country_code_by_addr(gi, ip);
 
@@ -64,7 +70,7 @@ static int geoip_lookup_country(char *ip, vcl_string *resolved) {
 }
 
 /* Simplified version: sets "X-Geo-IP" header with the country only */
-void vmod_set_geoip_country_header(const struct vrt_ctx *ctx) {
+void vmod_set_country_header(const struct vrt_ctx *ctx) {
     vcl_string hval[HEADER_MAXLEN];
     char *ip = VRT_IP_string(ctx, VRT_r_client_ip(ctx));
     geoip_lookup_country(ip, hval);

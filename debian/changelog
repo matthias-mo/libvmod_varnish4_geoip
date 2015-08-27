@@ -1,6 +1,5 @@
-libvmodv_varnish4_geoip (0.1)  jessie; urgency=low
+libvmod-varnish4-geoip (0.1.0-1) jessie; urgency=low
 
   * First release
 
- -- Matthias Weiss  Thu, 27 Aug 2015 13:11:00 +0000
-
+ -- Matthias Weiss  <matthias@more-onion.com>  Thu, 27 Aug 2015 13:11:00 +0200

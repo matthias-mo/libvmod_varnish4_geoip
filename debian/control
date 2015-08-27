@@ -1,7 +1,7 @@
-Source: libvmod_varnish4_geoip
+Source: libvmod-varnish4-geoip
 Section: net
 Priority: optional
-Homepage: https://github.com/matthias-mo/libvmod_varnish4_geoip
+Homepage: https://github.com/matthias-mo/libvmod-varnish4-geoip
 Maintainer: Matthias Weiss
 Build-Depends: debhelper (>= 9),
  autotools-dev,
@@ -10,16 +10,17 @@ Build-Depends: debhelper (>= 9),
  pkg-config,
  autoconf,
  python-docutils,
- libgeoip-dev
+ libgeoip-dev,
+ libvarnishapi-dev
 Standards-Version: 3.9.4
 
-Package: libvmod_varnish4_geoip
+Package: libvmod-varnish4-geoip
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends},
  dpkg (>= 1.15.6~)
 Depends: ${misc:Depends},
- ${shlibs:Depends}
+ ${shlibs:Depends},
+ libgeoip1 (= ${binary:Version}),
+ libvarnishapi1 (= ${binary:Version})
 Multi-Arch: same
-Description: libvmod_varnish4_geoip
-
-
+Description: libvmod-varnish4-geoip
