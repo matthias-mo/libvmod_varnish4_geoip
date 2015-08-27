@@ -3,7 +3,7 @@ libvmod_geoip
 
 Varnish 4 vmod for adding a header entry inlcluding the GeoIP information
 
-**I have no clue what I'm doing, will most eat puppies.**
+**I have no clue what I'm doing, will most likely eat puppies.**
 
 Requirement:
 ============

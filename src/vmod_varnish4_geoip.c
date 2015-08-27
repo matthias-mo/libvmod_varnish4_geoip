@@ -20,9 +20,9 @@
 
 #define vcl_string char
 
-/* At Opera, we use the non-existent "A6" country
+/* Set the non-existent "WORLD" country
    code to identify Geo::IP failed lookups */
-#define FALLBACK_COUNTRY "A6"
+#define FALLBACK_COUNTRY "WORLD"
 
 /* HTTP Header will be json-like */
 #define HEADER_MAXLEN 255
