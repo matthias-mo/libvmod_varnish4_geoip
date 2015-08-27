@@ -1,0 +1,3 @@
+$Module geoip 3 Varnish 4 GeoIP module
+$Init init_function
+$Function VOID set_geoip_country_header(CTX)
