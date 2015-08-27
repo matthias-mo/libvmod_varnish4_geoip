@@ -16,6 +16,7 @@
 #include "vcl.h"
 #include "vrt.h"
 #include "vrt_obj.h"
+#include "vdef.h"
 
 #define vcl_string char
 
@@ -70,7 +71,8 @@ static int geoip_lookup_country(char *ip, vcl_string *resolved) {
 }
 
 /* Simplified version: sets "X-Geo-IP" header with the country only */
-void vmod_set_country_header(const struct vrt_ctx *ctx) {
+VCL_VOID __match_proto__(td_geoip_set_country_header)
+vmod_set_country_header(const struct vrt_ctx *ctx) {
     vcl_string hval[HEADER_MAXLEN];
     char *ip = VRT_IP_string(ctx, VRT_r_client_ip(ctx));
     geoip_lookup_country(ip, hval);

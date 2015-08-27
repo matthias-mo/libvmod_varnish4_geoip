@@ -1,4 +1,4 @@
-libvmod_varnish4_geoip
+libvmod_geoip
 ======================
 
 Varnish 4 vmod for adding a header entry inlcluding the GeoIP information
@@ -27,7 +27,7 @@ import geoip;
 
 sub vcl_recv {
     if (req.restarts == 0 && (req.method == "GET" || req.method == "POST")) {
-        set_geoip_country_header(ctx);
+        geoip.set_country_header();
     }
 }
 
