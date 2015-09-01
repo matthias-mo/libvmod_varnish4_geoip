@@ -12,12 +12,26 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 #include <GeoIPCity.h>
 #include <pthread.h>
 
 #include "vrt.h"
 #include "vrt_obj.h"
 #include "vdef.h"
+
+/* from mgt/mgt.h */
+#define REPORT0(pri, fmt)       \
+  do {                          \
+    fprintf(stderr, fmt "\n");  \
+    syslog(pri, fmt);           \
+  } while (0)
+
+#define REPORT(pri, fmt, ...)               \
+  do {                                      \
+    fprintf(stderr, fmt "\n", __VA_ARGS__); \
+    syslog(pri, fmt, __VA_ARGS__);          \
+  } while (0)
 
 #define vcl_string char
 
@@ -29,7 +43,7 @@
 #define HEADER_MAXLEN 255
 
 pthread_mutex_t geoip_mutex;
-GeoIP *         gi;
+GeoIP *         gi = NULL;
 
 /*
  * vmod entrypoint.
@@ -39,7 +53,7 @@ GeoIP *         gi;
 int init_function(struct vmod_priv *priv, const struct VCL_conf *cfg) {
 
   if (pthread_mutex_init(&geoip_mutex, NULL) != 0) {
-    printf("\nMutex init failed\n");
+    REPORT0(LOG_ERR, "Mutex initializing failed");
     return 1;
   }
 
@@ -48,15 +62,16 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *cfg) {
       gi = GeoIP_open_type(GEOIP_COUNTRY_EDITION, GEOIP_STANDARD);
     }
     if (!gi) {
-      printf("\nGeoIP DB initialization failed.\n");
+      REPORT0(LOG_ERR, "Failed to initialize GeoIP DB");
       return 1;
     }
   }
   return 0;
 }
 
-static int geoip_lookup_country(char *ip, vcl_string *resolved) {
+static void geoip_lookup_country(const struct vrt_ctx *ctx, vcl_string *resolved) {
 
+  char *ip = VRT_IP_string(ctx, VRT_r_client_ip(ctx));
   pthread_mutex_lock(&geoip_mutex);
 
   const char * rec = GeoIP_country_code_by_addr(gi, ip);
@@ -67,9 +82,6 @@ static int geoip_lookup_country(char *ip, vcl_string *resolved) {
            rec ? rec : FALLBACK_COUNTRY);
 
   pthread_mutex_unlock(&geoip_mutex);
-
-  /* Assume always success: we have FALLBACK_COUNTRY */
-  return 1;
 }
 
 /* Simplified version: sets "X-Geo-IP" header with the country only */
@@ -82,9 +94,9 @@ vmod_set_country_header(const struct vrt_ctx *ctx) {
   const char * referer    = VRT_GetHdr(ctx, &VGC_HDR_REQ_Referer);
   const char * host       = VRT_GetHdr(ctx, &VGC_HDR_REQ_Host);
   const char * user_agent = VRT_GetHdr(ctx, &VGC_HDR_REQ_User_Agent);
-    
+
   if (referer && *referer && host && *host) {
-    printf("\n\nReferer: \"%s\"\n\n", referer);
+    REPORT(LOG_DEBUG, "Referer: \"%s\"", referer);
     const char from_search[] = "://";
     const int  to_search     = (int)'/';
     const char * ref_from    = strstr(referer, from_search) + 3;
@@ -95,28 +107,28 @@ vmod_set_country_header(const struct vrt_ctx *ctx) {
     assert(ref_from != NULL);
     assert(reflen <= HEADER_MAXLEN);
 
-    printf("\n\nRef lengths is: %u\n\n", reflen);
     strncpy(ref, ref_from, reflen);
     ref[reflen] = '\0';
     /* do not redirect when the referer is from the same URL */
     if (strncmp(ref, host, strlen(host)) == 0) {
-      printf("\n\nHost and Referer are equal: \"%s\"\n", ref);
-      printf("\nNot setting the GeoIP header for redirecting\n\n");
+      REPORT(LOG_DEBUG, "Host and Referer are equal: \"%s\"", ref);
+      REPORT0(LOG_DEBUG, "Not setting the GeoIP header for redirecting");
       return;
     } else {
-      printf("\n\nHost \"%s\" and Referer \"%s\" are not equal\n\n", host, ref);
+      REPORT(LOG_DEBUG, "Host \"%s\" and Referer \"%s\" are not equal", host, ref);
+      REPORT0(LOG_DEBUG, "Setting the GeoIP header for redirecting");
     }
   }
   if (user_agent && *user_agent ) {
-    printf("\n\nUser-Agent: \"%s\"\n\n", user_agent);
+    REPORT(LOG_DEBUG, "User-Agent: \"%s\"", user_agent);
     const char mozilla[] = "Mozilla";
     if (strstr(user_agent, mozilla)) {
-      printf("\n\nUser-Agent claims to be a Mozilla\n\n");
+      REPORT0(LOG_DEBUG, "User-Agent claims to be Mozilla");
       const char * const bot_str[] = {"bot", "crawler", "spider"};
       for (size_t i = 0; i < 3; i++) {
         if (strcasestr(user_agent, bot_str[i]) != NULL) {
           /* user agent says its a bot/crawler/spider: we don't redirect */
-          printf("\n\nUser-Agent claims to be Mozilla bot: we don't set the GeoIP header for redirecting\n\n");
+          REPORT0(LOG_DEBUG, "User-Agent claims to be a Mozilla bot: not setting the GeoIP header for redirecting");
           return;
         }
       }
@@ -133,20 +145,18 @@ vmod_set_country_header(const struct vrt_ctx *ctx) {
       }
       if (known_agent == 0) {
         /* user agent is not one we know -> we don't redirect */
-        printf("\n\nUser-Agent is not one we know: we don't set the GeoIP header for redirecting\n\n");
+        REPORT0(LOG_DEBUG, "User-Agent is not one of our list: not settting the GeoIP header for redirecting");
         return;
       }
     }
   } else {
     /* do not redirect when the user agent header isn't set */
-    printf("\n\nUser-Agent is not set: we don't set the GeoIP header for redirecting\n\n");
+    REPORT0(LOG_DEBUG, "User-Agent is not set: not setting the GeoIP header for redirecting");
     return;
   }
   vcl_string hval[HEADER_MAXLEN + 1];
-  char *ip = VRT_IP_string(ctx, VRT_r_client_ip(ctx));
-  geoip_lookup_country(ip, hval);
-  printf("\n\nSetting the GeoIP header to: \"%s\"\n\n", hval);
-  fflush(stdout);
+  geoip_lookup_country(ctx, hval);
+  REPORT(LOG_DEBUG, "Setting the GeoIP header to: \"%s\"", hval);
 
   static const struct gethdr_s VGC_HDR_REQ_GEO_IP = { HDR_REQ, "\011X-Geo-IP:"};
 
