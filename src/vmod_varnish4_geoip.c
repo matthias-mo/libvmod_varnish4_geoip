@@ -16,9 +16,21 @@
 #include <GeoIPCity.h>
 #include <pthread.h>
 
+struct suckaddr {
+  unsigned      magic;
+#define SUCKADDR_MAGIC      0x4b1e9335
+  union {
+    struct sockaddr   sa;
+    struct sockaddr_in  sa4;
+    struct sockaddr_in6 sa6;
+  };
+};
+
+#include "miniobj.h"
 #include "vrt.h"
 #include "vrt_obj.h"
 #include "vdef.h"
+
 
 /* from mgt/mgt.h */
 #define REPORT0(pri, fmt)       \
@@ -77,9 +89,8 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *cfg) {
   return 0;
 }
 
-static void geoip_lookup_country(const struct vrt_ctx *ctx, vcl_string *resolved) {
+static void geoip_lookup_country(const struct vrt_ctx *ctx, vcl_string *resolved, const char * ip) {
 
-  char *ip = VRT_IP_string(ctx, VRT_r_client_ip(ctx));
   pthread_mutex_lock(&geoip_mutex);
 
   const char * rec = GeoIP_country_code_by_addr(gi, ip);
@@ -92,10 +103,18 @@ static void geoip_lookup_country(const struct vrt_ctx *ctx, vcl_string *resolved
   pthread_mutex_unlock(&geoip_mutex);
 }
 
+VCL_STRING __match_proto__(td_geoip_get_ip_string)
+vmod_get_ip_string(const struct vrt_ctx *ctx, const VCL_IP ip_address) {
+  CHECK_OBJ_NOTNULL(ip_address, SUCKADDR_MAGIC);
+  CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
+  return VRT_IP_string(ctx, ip_address);
+}
+
 /* Simplified version: sets "X-Geo-IP" header with the country only */
 VCL_VOID __match_proto__(td_geoip_set_country_header)
-vmod_set_country_header(const struct vrt_ctx *ctx) {
+vmod_set_country_header(const struct vrt_ctx *ctx, const char * ip_address) {
 
+  CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
   static const struct gethdr_s VGC_HDR_REQ_Referer    = { HDR_REQ, "\010Referer:"};
   static const struct gethdr_s VGC_HDR_REQ_Host       = { HDR_REQ, "\005Host:"};
   static const struct gethdr_s VGC_HDR_REQ_User_Agent = { HDR_REQ, "\013User-Agent:"};
@@ -103,6 +122,11 @@ vmod_set_country_header(const struct vrt_ctx *ctx) {
   const char * host       = VRT_GetHdr(ctx, &VGC_HDR_REQ_Host);
   const char * user_agent = VRT_GetHdr(ctx, &VGC_HDR_REQ_User_Agent);
 
+  if (!ip_address || !*ip_address) {
+    REPORT0(LOG_WARNING, "No IP address set in \"set_country_header\", can't set \"X-Geo-IP\" header.");
+    return;
+  }
+  DEBUG_LOG("Client IP: \"%s\"", ip_address);
   if (referer && *referer && host && *host) {
     DEBUG_LOG("Referer: \"%s\"", referer);
     const char from_search[] = "://";
@@ -164,7 +188,7 @@ vmod_set_country_header(const struct vrt_ctx *ctx) {
     return;
   }
   vcl_string hval[HEADER_MAXLEN + 1];
-  geoip_lookup_country(ctx, hval);
+  geoip_lookup_country(ctx, hval, ip_address);
   DEBUG_LOG("Setting the GeoIP header to: \"%s\"", hval);
 
   static const struct gethdr_s VGC_HDR_REQ_GEO_IP = { HDR_REQ, "\011X-Geo-IP:"};

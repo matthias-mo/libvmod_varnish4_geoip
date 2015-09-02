@@ -1,3 +1,4 @@
 $Module geoip 3 Varnish 4 GeoIP module
 $Init init_function
-$Function VOID set_country_header()
+$Function VOID set_country_header(STRING)
+$Function STRING get_ip_string(IP)
