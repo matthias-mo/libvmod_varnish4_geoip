@@ -1,4 +1,8 @@
+if DEBUG
+AM_CPPFLAGS = @VMOD_INCLUDES@ -D DEBUG
+else
 AM_CPPFLAGS = @VMOD_INCLUDES@
+endif
 
 vmoddir = @VMOD_DIR@
 vmodtoolargs = --strict
