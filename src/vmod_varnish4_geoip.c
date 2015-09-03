@@ -135,11 +135,14 @@ vmod_set_country_header(const struct vrt_ctx *ctx, const char * ip_address) {
     VRT_SetHdr(ctx, &VGC_HDR_REQ_GEO_IP, "redirect=no", vrt_magic_string_end);
     return;
   }
+#ifdef DEBUG
   DEBUG_LOG("Client IP: \"%s\"", ip_address);
-
+#endif
   if (referer && *referer && host && *host) {
+#ifdef DEBUG
     DEBUG_LOG("Referer: \"%s\"", referer);
     DEBUG_LOG("Host: \"%s\"", host);
+#endif
     const char from_search[] = "://";
     const int  to_search     = (int)'/';
     const char * ref_from    = strstr(referer, from_search);
@@ -163,26 +166,36 @@ vmod_set_country_header(const struct vrt_ctx *ctx, const char * ip_address) {
     ref[reflen] = '\0';
     /* do not redirect when the referer is from the same URL */
     if (strncmp(ref, host, strlen(host)) == 0) {
+#ifdef DEBUG
       DEBUG_LOG("Host and Referer are equal: \"%s\"", ref);
       DEBUG_LOG0("Not setting the GeoIP header for redirecting");
+#endif
       VRT_SetHdr(ctx, &VGC_HDR_REQ_GEO_IP, "redirect=no", vrt_magic_string_end);
       return;
     } else {
       strncpy(hval, "redirect=yes&", 13);
+#ifdef DEBUG
       DEBUG_LOG("Host \"%s\" and Referer \"%s\" are not equal", host, ref);
       DEBUG_LOG0("Setting the GeoIP header for redirecting");
+#endif
     }
   }
   if (user_agent && *user_agent ) {
+#ifdef DEBUG
     DEBUG_LOG("User-Agent: \"%s\"", user_agent);
+#endif
     const char mozilla[] = "Mozilla";
     if (strstr(user_agent, mozilla)) {
+#ifdef DEBUG
       DEBUG_LOG0("User-Agent claims to be Mozilla");
+#endif
       const char * const bot_str[] = {"bot", "crawler", "spider"};
       for (size_t i = 0; i < 3; i++) {
         if (strcasestr(user_agent, bot_str[i]) != NULL) {
           /* user agent says its a bot/crawler/spider: we don't redirect */
+#ifdef DEBUG
           DEBUG_LOG0("User-Agent claims to be a Mozilla bot: not setting the GeoIP header for redirecting");
+#endif
           VRT_SetHdr(ctx, &VGC_HDR_REQ_GEO_IP, "redirect=no", vrt_magic_string_end);
           return;
         }
@@ -201,7 +214,9 @@ vmod_set_country_header(const struct vrt_ctx *ctx, const char * ip_address) {
       }
       if (known_agent == 0) {
         /* user agent is not one we know -> we don't redirect */
+#ifdef DEBUG
         DEBUG_LOG0("User-Agent is not one of our list: not settting the GeoIP header for redirecting");
+#endif
         VRT_SetHdr(ctx, &VGC_HDR_REQ_GEO_IP, "redirect=no", vrt_magic_string_end);
         return;
       }
@@ -209,13 +224,16 @@ vmod_set_country_header(const struct vrt_ctx *ctx, const char * ip_address) {
     }
   } else {
     /* do not redirect when the user agent header isn't set */
+#ifdef DEBUG
     DEBUG_LOG0("User-Agent is not set: not setting the GeoIP header for redirecting");
+#endif
     VRT_SetHdr(ctx, &VGC_HDR_REQ_GEO_IP, "redirect=no", vrt_magic_string_end);
     return;
   }
 
   geoip_lookup_country(hval + strlen(hval), ip_address);
+#ifdef DEBUG
   DEBUG_LOG("Setting the GeoIP header to: \"%s\"", hval);
-
+#endif
   VRT_SetHdr(ctx, &VGC_HDR_REQ_GEO_IP, hval, vrt_magic_string_end);
 }
