@@ -1,0 +1,34 @@
+varnishtest "test referer is set and equal to the host header; check if \"X-GeoIP\" header is not set"
+  
+server s1 {
+
+  rxreq
+  expect req.http.X-GeoIP == "redirect=no"
+  txresp -bodylen 1
+  
+} -start
+
+varnish v1 -vcl+backend {
+
+  import geoip;
+    
+  sub vcl_recv {
+    if (req.restarts == 0 && (req.method == "GET" || req.method == "POST")) {
+      geoip.set_country_header("178.188.144.54");
+    }
+  }
+
+  sub vcl_hash {
+    if (req.http.X-GeoIP ~ "^redirect") {
+      hash_data(req.http.X-GeoIP);
+    }
+  }
+
+} -start
+
+client c1 {
+
+  txreq -url "/" -hdr "Host: maximum.long.url.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.net" -hdr "Referer: http://maximum.long.url.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.net" -hdr "X-GeoIP: randomString" -hdr "User-Agent: Mozilla"
+  rxresp
+
+} -run
