@@ -19,6 +19,7 @@ fi
 AC_PROG_CPP
 
 AC_PROG_INSTALL
+LT_INIT([shared disable-static])
 AC_PROG_LIBTOOL
 AC_PROG_MAKE_SET
 

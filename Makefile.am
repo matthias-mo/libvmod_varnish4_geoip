@@ -2,19 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = src
 
-dist_man_MANS = vmod_varnish4_geoip.3
-MAINTAINERCLEANFILES = $(dist_man_MANS)
 doc_DATA = README.rst LICENSE
-
-vmod_varnish4_geoip.3: README.rst
-if HAVE_RST2MAN
-	${RST2MAN} README.rst $@
-else
-	@echo "========================================"
-	@echo "You need rst2man installed to make dist"
-	@echo "========================================"
-	@false
-endif
 
 clean-build-crap: clean-recursive distclean-recursive clean-libtool mostlyclean-am
 	-rm -f Makefile
@@ -36,6 +24,7 @@ clean-build-crap: clean-recursive distclean-recursive clean-libtool mostlyclean-
 	-rm -f src/Makefile.in
 	-rm -f src/vmod_geoip.man.rst
 	-rm -f src/vmod_geoip.rst
+	-rm -fr src/.libs
 	-rm -f vmod_varnish4_geoip.3
 	-rm -f debian/autoreconf.after
 	-rm -f debian/autoreconf.before
