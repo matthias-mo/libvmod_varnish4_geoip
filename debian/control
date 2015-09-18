@@ -21,3 +21,8 @@ Pre-Depends: ${misc:Pre-Depends},
 Depends: ${shlibs:Depends}, ${misc:Depends},
 Multi-Arch: same
 Description: VMOD plugin for varnish 4 to set a HTTP header with the GeoIP country
+ This varnish vmod looks up the IP address of the client connecting to varnish
+ in the GeoIP database and sets the HTTP header field "X-GeoIP" with the ISO
+ country code it gets from GeoIP. It further sets the "redirect" flag in the
+ same header field as a recommendation for the backend on whether to redirect to
+ a country specific page or not.
