@@ -16,7 +16,7 @@ else
 	@false
 endif
 
-clean-auto-crap: clean-recursive distclean-recursive clean-libtool mostlyclean-am
+clean-build-crap: clean-recursive distclean-recursive clean-libtool mostlyclean-am
 	-rm -f Makefile
 	-rm -f Makefile.in
 	-rm -f aclocal.m4
@@ -37,4 +37,10 @@ clean-auto-crap: clean-recursive distclean-recursive clean-libtool mostlyclean-a
 	-rm -f src/vmod_geoip.man.rst
 	-rm -f src/vmod_geoip.rst
 	-rm -f vmod_varnish4_geoip.3
-
+	-rm -f debian/autoreconf.after
+	-rm -f debian/autoreconf.before
+	-rm -f debian/files
+	-rm -f debian/libvmod-varnish4-geoip.debhelper.log
+	-rm -f debian/libvmod-varnish4-geoip.substvars
+	-rm -fr debian/libvmod-varnish4-geoip
+	-rm -fr debian/tmp

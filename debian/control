@@ -2,7 +2,7 @@ Source: libvmod-varnish4-geoip
 Section: net
 Priority: optional
 Homepage: https://github.com/matthias-mo/libvmod-varnish4-geoip
-Maintainer: Matthias Weiss
+Maintainer: Matthias Weiss <matthias@more-onion.com>
 Build-Depends: debhelper (>= 9),
  autotools-dev,
  dh-autoreconf,
@@ -12,15 +12,12 @@ Build-Depends: debhelper (>= 9),
  python-docutils,
  libgeoip-dev,
  libvarnishapi-dev
-Standards-Version: 3.9.4
+Standards-Version: 3.9.6
 
 Package: libvmod-varnish4-geoip
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends},
  dpkg (>= 1.15.6~)
-Depends: ${misc:Depends},
- ${shlibs:Depends},
- libgeoip1 (= ${binary:Version}),
- libvarnishapi1 (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends},
 Multi-Arch: same
-Description: libvmod-varnish4-geoip
+Description: VMOD plugin for varnish 4 to set a HTTP header with the GeoIP country
