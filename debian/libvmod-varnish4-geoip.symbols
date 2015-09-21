@@ -1,0 +1,7 @@
+libvmod_geoip.so libvmod-varnish4-geoip #MINVER#
+ Vmod_geoip_Data@Base 1.0-1
+ geoip_mutex@Base 1.0-1
+ gi@Base 1.0-1
+ init_function@Base 1.0-1
+ vmod_get_ip_string@Base 1.0-1
+ vmod_set_country_header@Base 1.0-1
